@@ -8,6 +8,8 @@ public class PhotonInit : MonoBehaviour
     [SerializeField] string Version = "V_car.1.0";
     [SerializeField] InputField userID;
     [SerializeField] InputField roomName;
+    [SerializeField] GameObject scrollContents;
+    [SerializeField] GameObject roomItem;
     private void Awake()
     {               //포톤 클라우드에 접속 버전별로
         PhotonNetwork.ConnectUsingSettings(Version);
@@ -77,10 +79,35 @@ public class PhotonInit : MonoBehaviour
         roomOptions.MaxPlayers = 5;
         PhotonNetwork.CreateRoom(_roomName, roomOptions, TypedLobby.Default);
     }
+    void OnReceivedRoomListUpdate() //방이 생성되거나 삭제 룸목록이 변경될때 호출되는 콜백함수
+    {
+        foreach(var obj in GameObject.FindGameObjectsWithTag("RoomItem"))
+        {
+            Destroy(obj);
+        }
+        foreach(RoomInfo _room in PhotonNetwork.GetRoomList())
+        {
+            GameObject room = (GameObject)Instantiate(roomItem);
+            room.transform.SetParent(scrollContents.transform, false);
+
+            RoomData roomData = room.GetComponent<RoomData>();
+            roomData.roomName = _room.Name;
+            roomData.connectPlayer = _room.PlayerCount;
+            roomData.maxPlayers = _room.MaxPlayers;
+            roomData.DisplayRoomData();
+            roomData.GetComponent<Button>().onClick.AddListener(delegate { OnClickRoomItem(roomData.roomName); });
+        }
+    }
     private void OnGUI()
     {
         GUILayout.Label(PhotonNetwork.connectionStateDetailed.ToString());
         //좌측 상단에 포톤네트워크 접속 정보를 표시
+    }
+    void OnClickRoomItem(string roomName)
+    {
+        PhotonNetwork.player.NickName = userID.text;
+        PlayerPrefs.SetString("USER_", userID.text);
+        PhotonNetwork.JoinRoom(roomName);
     }
     void CreateCar()
     {
